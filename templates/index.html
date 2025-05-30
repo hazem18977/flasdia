@@ -416,11 +416,11 @@
             },
             predictionMessages: {
                 en: {
-                    noDiabetes: 'No diabetes (Probability: {probability}%)',
+                    noDiabetes: 'No Diabetes (Confidence: {confidence}%)',
                     diabetesDetected: 'Diabetes detected (Probability: {probability}%)'
                 },
                 ru: {
-                    noDiabetes: 'Нет диабета (Вероятность: {probability}%)',
+                    noDiabetes: 'Нет диабета (Уверенность: {confidence}%)',
                     diabetesDetected: 'Вероятность наличия диабета —  ({probability}%)'
                 }
             },
@@ -549,12 +549,15 @@
                 let messageTemplate;
                 if (isDiabetic) {
                     messageTemplate = translations.predictionMessages[lang].diabetesDetected;
+                    // Replace the placeholder with the actual probability
+                    probabilityText.textContent = messageTemplate.replace('{probability}', probabilityPercentage);
                 } else {
                     messageTemplate = translations.predictionMessages[lang].noDiabetes;
+                    // For "No Diabetes", calculate confidence as 100 - probability
+                    const confidencePercentage = (100 - parseFloat(probabilityPercentage)).toFixed(1);
+                    // Replace the placeholder with the confidence percentage
+                    probabilityText.textContent = messageTemplate.replace('{confidence}', confidencePercentage);
                 }
-
-                // Replace the placeholder with the actual probability
-                probabilityText.textContent = messageTemplate.replace('{probability}', probabilityPercentage);
             }
         }
 
@@ -664,18 +667,21 @@
                     riskLevel.style.display = 'none';
                     predictionResult.style.display = 'none';
 
-                    // Display the new format with probability always included
+                    // Display the new format with probability/confidence
                     let messageTemplate;
                     if (isDiabetic) {
                         messageTemplate = translations.predictionMessages[currentLang].diabetesDetected;
                         probabilityText.className = 'high-risk';
+                        // Replace the placeholder with the actual probability
+                        probabilityText.textContent = messageTemplate.replace('{probability}', probabilityPercentage);
                     } else {
                         messageTemplate = translations.predictionMessages[currentLang].noDiabetes;
                         probabilityText.className = 'low-risk';
+                        // For "No Diabetes", calculate confidence as 100 - probability
+                        const confidencePercentage = (100 - probability * 100).toFixed(1);
+                        // Replace the placeholder with the confidence percentage
+                        probabilityText.textContent = messageTemplate.replace('{confidence}', confidencePercentage);
                     }
-
-                    // Replace the placeholder with the actual probability
-                    probabilityText.textContent = messageTemplate.replace('{probability}', probabilityPercentage);
 
                     // Store risk level for other functions that might need it
                     riskLevel.setAttribute('data-risk', translations.riskLevels['en'][riskText]);
