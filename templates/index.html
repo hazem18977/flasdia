@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetes Risk Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .prediction-form {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 30px;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        .result-card {
+            display: none;
+            margin-top: 30px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .result-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .btn-predict {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 30px;
+            font-weight: 500;
+        }
+        .btn-predict:hover {
+            background-color: #34495e;
+            color: white;
+        }
+        .risk-indicator {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .low-risk { color: #27ae60; }
+        .medium-risk { color: #f39c12; }
+        .high-risk { color: #c0392b; }
+
+        #probabilityText {
+            font-size: 1.25rem;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 15px;
+            display: none;
+        }
+        .spinner-border {
+            display: none;
+            margin: 0 10px;
+        }
+        .language-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .language-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #2c3e50;
+            color: #2c3e50;
+            padding: 5px 15px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .language-btn:hover {
+            background: #2c3e50;
+            color: white;
+        }
+        .language-btn.active {
+            background: #2c3e50;
+            color: white;
+        }
+        .top-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }
+        .change-patient-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #2c3e50;
+            color: #2c3e50;
+            padding: 5px 15px;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .change-patient-btn:hover {
+            background: #2c3e50;
+            color: white;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm   /bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="top-controls">
+        <div class="language-switch">
+            <button class="language-btn" data-lang="en">EN</button>
+            <button class="language-btn active" data-lang="ru">RU</button>
+        </div>
+        <a href="{{ url_for('login') }}" class="change-patient-btn">
+            <img src="{{ url_for('static', filename='images/switch-user.png') }}" alt="Switch User" class="medical-icon" style="width: 24px; height: 24px; margin: 0 5px 0 0;">
+            <span data-en="Change Patient" data-ru="Сменить пациента">Change Patient</span>
+        </a>
+    </div>
+
+    <div class="header header-bg">
+        <div class="container">
+            <div class="site-logo">
+                <img src="{{ url_for('static', filename='images/health-logo.png') }}" alt="Health Logo">
+            </div>
+            <h1 class="text-center" data-en="Diabetes Risk" data-ru="Риск диабета">Diabetes Risk</h1>
+            <h3 class="text-center welcome-text">
+                <img src="{{ url_for('static', filename='images/user-circle.png') }}" alt="User" class="medical-icon" style="width: 32px; height: 32px; margin: 0 5px;">
+                <span data-en="Welcome" data-ru="Добро пожаловать">Welcome</span>,
+                {{ patient_name }}
+            </h3>
+            <p class="text-center mb-0" data-en="Advanced Medical Analysis System" data-ru="Система расширенного медицинского анализа">Advanced Medical Analysis System</p>
+            <div class="text-center mt-3">
+                <div class="d-inline-block">
+                    <span data-en="Студент:" data-ru="Студент:">Студент:</span>
+                    <strong>Абоуелезз Хазем Тахер</strong>
+                </div>
+                <div class="d-inline-block ms-3">
+                    <span data-en="Руководитель проекта:" data-ru="Руководитель проекта:">Руководитель проекта:</span>
+                    <strong>Смирнов Андрей Алексеевич</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="medical-disclaimer alert alert-warning">
+                    <img src="{{ url_for('static', filename='images/warning.png') }}" alt="Warning" class="medical-icon" style="width: 32px; height: 32px; float: left; margin-right: 15px;">
+                    <h5 class="mb-2" data-en="Medical Disclaimer" data-ru="Медицинское предупреждение">Medical Disclaimer</h5>
+                    <p class="mb-0" data-en="This website is for informational purposes only and does not replace consultation with a doctor."
+                       data-ru="Этот веб-сайт предназначен только для информационных целей и не заменяет консультацию с врачом.">
+                        This website is for informational purposes only and does not replace consultation with a doctor.
+                    </p>
+                </div>
+
+                <div class="prediction-form">
+                    <div class="error-message text-center mb-3" id="errorMessage"></div>
+                    <form id="predictionForm">
+                        <div class="model-select-section mb-4">
+                            <label for="model_type" class="form-label" data-en="choose a machine learning algorithm" data-ru="выберете алгоритм машинного обучения">Select Model</label>
+                            <select class="form-select" id="model_type" name="model_type" required>
+                                <option value="" disabled selected data-en="Select a model" data-ru="Выберите модель">Select a model</option>
+                                <option value="random_forest" data-en="Random Forest" data-ru="Случайный лес (Random Forest Classifier)">Random Forest</option>
+                                <option value="adaboost" data-en="AdaBoost" data-ru="АдаБуст (AdaBoost Classifier)">AdaBoost</option>
+                                <option value="decision_tree" data-en="Decision Tree" data-ru="Дерево решений (Decision Tree Classifier)">Decision Tree</option>
+                                <option value="logistic_regression" data-en="Logistic Regression" data-ru="Логистическая регрессия (Logistic Regression Classifier)">Logistic Regression</option>
+                                <option value="svm" data-en="Support Vector Machine" data-ru="Метод опорных векторов (Support Vector Machine Classifier)">Support Vector Machine</option>
+                            </select>
+
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="gender" class="form-label" data-en="Gender" data-ru="Пол">Gender</label>
+                                <select class="form-select" id="gender" name="gender" required>
+                                    <option value="" data-en="Select gender" data-ru="Выберите пол">Select gender</option>
+                                    <option value="Female" data-en="Female" data-ru="Женский">Female</option>
+                                    <option value="Male" data-en="Male" data-ru="Мужской">Male</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="age" class="form-label" data-en="Age" data-ru="Возраст">Age</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="age" name="age" min="0" max="120" step="1" required>
+                                    <span class="input-group-text" data-en="years" data-ru="лет">years</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="hypertension" class="form-label" data-en="Hypertension" data-ru="Гипертония">Hypertension</label>
+                                <select class="form-select" id="hypertension" name="hypertension" required>
+                                    <option value="" data-en="Select option" data-ru="Выберите вариант">Select option</option>
+                                    <option value="0" data-en="No" data-ru="Нет">No</option>
+                                    <option value="1" data-en="Yes" data-ru="Да">Yes</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="heart_disease" class="form-label" data-en="Heart Disease" data-ru="Сердечное заболевание">Heart Disease</label>
+                                <select class="form-select" id="heart_disease" name="heart_disease" required>
+                                    <option value="" data-en="Select option" data-ru="Выберите вариант">Select option</option>
+                                    <option value="0" data-en="No" data-ru="Нет">No</option>
+                                    <option value="1" data-en="Yes" data-ru="Да">Yes</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="smoking_history" class="form-label">
+                                    <span data-en="Smoking History" data-ru="История курения">Smoking History</span>
+                                </label>
+                                <select class="form-select" id="smoking_history" name="smoking_history" required>
+                                    <option value="" data-en="Select option" data-ru="Выберите вариант">Select option</option>
+                                    <option value="never" data-en="Never" data-ru="Никогда">Never</option>
+                                    <option value="former" data-en="Former" data-ru="Бывший">Former</option>
+                                    <option value="current" data-en="Current" data-ru="Текущий">Current</option>
+                                    <option value="ever" data-en="Ever" data-ru="Когда-либо">Ever</option>
+                                    <option value="No Info" data-en="No Information" data-ru="Нет информации">No Information</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="bmi" class="form-label" data-en="BMI" data-ru="ИМТ">BMI</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="bmi" name="bmi" step="0.1" min="15" max="75" required>
+                                    <span class="input-group-text">kg/m²</span>
+                                </div>
+                                <!-- Add BMI Calculator -->
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="showBmiCalc" data-en="Calculate BMI" data-ru="Рассчитать ИМТ">
+                                        Calculate BMI
+                                    </button>
+                                    <div id="bmiCalculator" class="mt-2" style="display: none;">
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control" id="weight" placeholder="Weight" step="0.1" min="30" max="300">
+                                                    <span class="input-group-text" data-en="kg" data-ru="кг">kg</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control" id="height" placeholder="Height" step="1" min="50" max="300">
+                                                    <span class="input-group-text" data-en="cm" data-ru="см">cm</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="calculatedBmi" class="mt-2 small"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="HbA1c_level" class="form-label" data-en="HbA1c Level" data-ru="Уровень HbA1c">HbA1c Level</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="HbA1c_level" name="HbA1c_level" step="0.1" min="3" max="20" required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="calculateGlucose">
+                                    <label class="form-check-label" for="calculateGlucose" data-en="Calculate Blood Glucose from HbA1c" data-ru="Рассчитать уровень глюкозы по HbA1c">
+                                        Calculate Blood Glucose from HbA1c
+                                    </label>
+                                </div>
+                                <div id="glucoseWarning" class="alert alert-warning mt-2" style="display: none;">
+                                    <small data-en="This is an estimated calculation using the formula: eAG = (28.7 × HbA1c) - 46.7. Results may vary from actual blood glucose levels."
+                                           data-ru="Это приблизительный расчет по формуле: eAG = (28.7 × HbA1c) - 46.7. Результаты могут отличаться от фактического уровня глюкозы в крови.">
+                                        This is an estimated calculation using the formula: eAG = (28.7 × HbA1c) - 46.7. Results may vary from actual blood glucose levels.
+                                    </small>
+                                    <div id="calculatedGlucose" class="mt-1 fw-bold"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="blood_glucose_level" class="form-label" data-en="Blood Glucose Level" data-ru="Уровень глюкозы в крови">Blood Glucose Level</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="blood_glucose_level" name="blood_glucose_level" step="0.1" min="50" max="530" required>
+                                    <span class="input-group-text" data-en="mg/dL" data-ru="мг/дл">mg/dL</span>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="calculateHbA1c">
+                                    <label class="form-check-label" for="calculateHbA1c" data-en="Calculate HbA1c from Blood Glucose" data-ru="Рассчитать HbA1c по уровень глюкозы">
+                                        Calculate HbA1c from Blood Glucose
+                                    </label>
+                                </div>
+                                <div id="hba1cWarning" class="alert alert-warning mt-2" style="display: none;">
+                                    <small data-en="This is an estimated calculation using the formula: HbA1c = (glucose + 46.7) / 28.7. Results may vary from actual HbA1c levels."
+                                           data-ru="Это приблизительный расчет по формуле: HbA1c = (glucose + 46.7) / 28.7. Результаты могут отличаться от фактического уровня HbA1c.">
+                                        This is an estimated calculation using the formula: HbA1c = (glucose + 46.7) / 28.7. Results may vary from actual HbA1c levels.
+                                    </small>
+                                    <div id="calculatedHbA1c" class="mt-1 fw-bold"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Medical Advice Consent -->
+                        <div class="ai-advice-consent mt-4 mb-3">
+                            <div class="alert alert-info">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="aiAdviceConsent">
+                                    <label class="form-check-label" for="aiAdviceConsent">
+                                        <span data-en="I understand and agree to receive AI-generated medical advice. This advice is generated by the LLaMA model and is for informational purposes only. It is not a substitute for professional medical consultation."
+                                              data-ru="Я понимаю и соглашаюсь получать медицинские рекомендации, сгенерированные ИИ. Эти рекомендации генерируются моделью LLaMA и предназначены только для информационных целей. Они не заменяют консультацию с профессиональным врачом.">
+                                            I understand and agree to receive AI-generated medical advice. This advice is generated by the LLaMA model and is for informational purposes only. It is not a substitute for professional medical consultation.
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-predict">
+                                <span data-en="Predict Risk" data-ru="Рассчитать риск">Predict Risk</span>
+                                <div class="spinner-border" role="status" id="loadingSpinner">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <!-- Health Advice Popup moved to below Feature Importance button -->
+                    </form>
+                </div>
+
+                <div class="result-card" id="resultCard">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <img id="resultIcon" src="{{ url_for('static', filename='images/result-pending.png') }}" alt="Result" class="result-image">
+                            <h4 class="card-title mb-4" data-en="Diabetes Prediction" data-ru="Прогноз диабета">Diabetes Prediction</h4>
+                            <div class="risk-indicator mb-3" id="riskLevel"></div>
+                            <div class="prediction-result mb-3" id="predictionResult"></div>
+                            <p class="mb-0" id="probabilityText"></p>
+                            <div class="mt-3"></div>
+                            <small class="text-muted" id="modelType"></small>
+
+                            <!-- Health Advice Icon (Hidden - Now using button below Feature Importance) -->
+                            <div class="health-advice-icon" style="display: none;">
+                                <img src="{{ url_for('static', filename='images/advice-icon.png') }}" alt="Health Advice"
+                                     class="medical-icon" style="width: 32px; height: 32px;">
+                            </div>
+
+                            <!-- Feature Importance Section -->
+                            <div class="mt-4" id="featureImportanceSection" style="display: none;">
+                                <h5 class="text-center mb-3" data-en="Key Factors Influencing Your Result" data-ru="Ключевые факторы, влияющие на ваш результат">
+                                    Key Factors Influencing Your Result
+                                </h5>
+                                <div id="featureImportanceContainer">
+                                    <!-- Progress bars will be dynamically inserted here -->
+                                </div>
+                            </div>
+
+                            <div class="mt-3 position-relative">
+                                <button type="button" class="btn btn-outline-secondary w-100" id="healthAdviceBtn" style="display: none;" onclick="showHealthAdvice()">
+                                    <i class="bi bi-chat-text me-1"></i>
+                                    <span data-en="View Advice" data-ru="Просмотреть рекомендации">View Advice</span>
+                                </button>
+
+                                <!-- Chat-like Popup for Health Advice -->
+                                <div class="health-advice-popup" id="healthAdvicePopup">
+                                    <div class="popup-header">
+                                        <h6 class="mb-0" data-en="Health Recommendation" data-ru="Медицинская рекомендация">
+                                            Health Recommendation
+                                        </h6>
+                                        <button type="button" class="btn-close" onclick="hideHealthAdvice()"></button>
+                                    </div>
+                                    <div class="popup-content">
+                                        <div class="chat-message" id="healthAdviceContent"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Add extra space after the advice button to ensure popup visibility -->
+                            <div style="height: 350px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Add extra space at the bottom to ensure popup visibility -->
+    <div style="height: 300px;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentLang = 'ru';
+
+        const translations = {
+            riskLevels: {
+                en: {
+                    Low: 'no diabetes',
+                    Medium: 'Moderate risk of diabetes',
+                    High: 'High risk of diabetes'
+                },
+                ru: {
+                    Low: 'нет диабета',
+                    Medium: 'Умеренный риск диабета',
+                    High: 'Высокий риск диабета'
+                }
+            },
+            predictionMessages: {
+                en: {
+                    noDiabetes: 'No diabetes (Probability: {probability}%)',
+                    diabetesDetected: 'Diabetes detected (Probability: {probability}%)'
+                },
+                ru: {
+                    noDiabetes: 'Нет диабета (Вероятность: {probability}%)',
+                    diabetesDetected: 'Вероятность наличия диабета —  ({probability}%)'
+                }
+            },
+            models: {
+                en: {
+                    random_forest: 'Random Forest Model',
+                    adaboost: 'AdaBoost Model',
+                    decision_tree: 'Decision Tree Model',
+                    logistic_regression: 'Logistic Regression Model',
+                    svm: 'Support Vector Machine Model'
+                },
+                ru: {
+                    random_forest: 'Модель случайного леса',
+                    adaboost: 'Модель АдаБуст',
+                    decision_tree: 'Модель дерева решений',
+                    logistic_regression: 'Модель логистической регрессии',
+                    svm: 'Модель опорных векторов'
+                }
+            },
+            probability: {
+                en: 'Probability of diabetes —',
+                ru: 'Вероятность наличия диабета —'
+            },
+            error: {
+                en: 'An error occurred while making the prediction. Please try again.',
+                ru: 'Произошла ошибка при расчете прогноза. Пожалуйста, попробуйте снова.'
+            },
+            result: {
+                en: 'Prediction Result',
+                ru: 'Результат прогноза'
+            }
+        };
+
+        // Initial language update
+        updateLanguage('ru');
+
+        // Function to format health advice based on language
+        function formatAdviceForLanguage(advice, lang) {
+            if (!advice) return '';
+
+            const adviceLines = advice.split('\n');
+            let formattedAdvice = '';
+
+            adviceLines.forEach(line => {
+                if (line.trim()) {
+                    if (lang === 'en' && line.includes('The medical advice is:')) {
+                        formattedAdvice += `<div class="advice-en mb-2">${line.trim()}</div>`;
+                    } else if (lang === 'ru' && line.includes('Медицинская рекомендация:')) {
+                        formattedAdvice += `<div class="advice-ru mb-2">${line.trim()}</div>`;
+                    }
+                }
+            });
+
+            return formattedAdvice;
+        }
+
+        // Helper function to show the result card with animation
+        function showResultCard(resultCard) {
+            resultCard.style.display = 'block';
+            // Force a reflow to enable the transition
+            resultCard.offsetHeight;
+            resultCard.classList.add('visible');
+        }
+
+        // Helper function to hide the result card
+        function hideResultCard(resultCard) {
+            resultCard.classList.remove('visible');
+            resultCard.style.display = 'none';
+        }
+
+        function updateLanguage(lang) {
+            currentLang = lang;
+
+            // Update all text elements with data attributes
+            document.querySelectorAll('[data-' + lang + ']').forEach(element => {
+                if (!element.querySelector('.spinner-border')) {
+                    const newText = element.getAttribute('data-' + lang);
+                    if (newText) element.textContent = newText;
+                }
+            });
+
+            // Update language buttons
+            document.querySelectorAll('.language-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+            });
+
+            // Update health advice display based on current language
+            const healthAdviceContent = document.getElementById('healthAdviceContent');
+            if (healthAdviceContent) {
+                const englishAdvice = healthAdviceContent.querySelectorAll('.advice-en');
+                const russianAdvice = healthAdviceContent.querySelectorAll('.advice-ru');
+                const divider = healthAdviceContent.querySelector('.divider');
+
+                if (lang === 'en') {
+                    englishAdvice.forEach(el => el.style.display = 'block');
+                    russianAdvice.forEach(el => el.style.display = 'none');
+                    if (divider) divider.style.display = 'none';
+                } else {
+                    englishAdvice.forEach(el => el.style.display = 'none');
+                    russianAdvice.forEach(el => el.style.display = 'block');
+                    if (divider) divider.style.display = 'none';
+                }
+            }
+
+            // Update risk level if it exists
+            const riskLevel = document.getElementById('riskLevel');
+            if (riskLevel.textContent) {
+                // Find the current risk level from the English text
+                const currentRisk = Object.keys(translations.riskLevels.en).find(key =>
+                    translations.riskLevels.en[key] === riskLevel.getAttribute('data-risk')
+                );
+                if (currentRisk) {
+                    riskLevel.textContent = translations.riskLevels[lang][currentRisk];
+                }
+            }
+
+            // Update probability text if it exists
+            const probabilityText = document.getElementById('probabilityText');
+            if (probabilityText.getAttribute('data-probability')) {
+                const probabilityPercentage = probabilityText.getAttribute('data-probability');
+
+                // Determine if it's a diabetes detection or no diabetes case
+                // We can check the current class to determine the prediction type
+                const isDiabetic = probabilityText.classList.contains('high-risk');
+
+                let messageTemplate;
+                if (isDiabetic) {
+                    messageTemplate = translations.predictionMessages[lang].diabetesDetected;
+                } else {
+                    messageTemplate = translations.predictionMessages[lang].noDiabetes;
+                }
+
+                // Replace the placeholder with the actual probability
+                probabilityText.textContent = messageTemplate.replace('{probability}', probabilityPercentage);
+            }
+        }
+
+        document.querySelectorAll('.language-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                updateLanguage(btn.getAttribute('data-lang'));
+            });
+        });
+
+        function updateResultIcon(riskLevel) {
+            const resultIcon = document.getElementById('resultIcon');
+            switch(riskLevel) {
+                case 'Low':
+                    resultIcon.src = "{{ url_for('static', filename='images/low-risk.png') }}";
+                    break;
+                case 'Medium':
+                    resultIcon.src = "{{ url_for('static', filename='images/medium-risk.png') }}";
+                    break;
+                case 'High':
+                    resultIcon.src = "{{ url_for('static', filename='images/high-risk.png') }}";
+                    break;
+                default:
+                    resultIcon.src = "{{ url_for('static', filename='images/result-pending.png') }}";
+            }
+        }
+
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const resultCard = document.getElementById('resultCard');
+            const errorMessage = document.getElementById('errorMessage');
+            const riskLevel = document.getElementById('riskLevel');
+            const probabilityText = document.getElementById('probabilityText');
+            const modelType = document.getElementById('modelType');
+
+            // Add language parameter to formData
+            formData.append('lang', currentLang);
+
+            // Add AI advice consent to formData
+            formData.append('ai_advice_consent', document.getElementById('aiAdviceConsent').checked);
+
+            // Hide previous results and show loading state
+            errorMessage.style.display = 'none';
+            errorMessage.className = 'error-message text-center mb-3';
+            hideResultCard(resultCard);
+
+            // Hide feature importance section
+            const featureImportanceSection = document.getElementById('featureImportanceSection');
+            featureImportanceSection.style.display = 'none';
+            featureImportanceSection.classList.remove('fade-in');
+
+            loadingSpinner.style.display = 'inline-block';
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.error) {
+                    errorMessage.textContent = result.error;
+                    errorMessage.className = 'alert alert-danger text-center mb-3';
+                    errorMessage.style.display = 'block';
+                    hideResultCard(resultCard);
+                } else {
+                    showResultCard(resultCard);
+
+                    // Display warning if present (for SVM-specific warnings)
+                    if (result.warning) {
+                        errorMessage.textContent = result.warning;
+                        errorMessage.style.display = 'block';
+                        errorMessage.className = 'alert alert-warning text-center mb-3';
+                    } else {
+                        errorMessage.style.display = 'none';
+                    }
+
+                    const probability = result.probability;
+                    let riskText = 'Low';
+                    let riskClass = 'low-risk';
+
+                    if (probability >= 0.7) {
+                        riskText = 'High';
+                        riskClass = 'high-risk';
+                    } else if (probability >= 0.5) {
+                        riskText = 'Medium';
+                        riskClass = 'medium-risk';
+                    }
+
+                    const isDiabetic = result.prediction === 1;
+                    const probabilityPercentage = (probability * 100).toFixed(1);
+                    probabilityText.setAttribute('data-probability', probabilityPercentage);
+
+                    // Hide the separate risk level and prediction result elements
+                    const riskLevel = document.getElementById('riskLevel');
+                    const predictionResult = document.getElementById('predictionResult');
+                    riskLevel.style.display = 'none';
+                    predictionResult.style.display = 'none';
+
+                    // Display the new format with probability always included
+                    let messageTemplate;
+                    if (isDiabetic) {
+                        messageTemplate = translations.predictionMessages[currentLang].diabetesDetected;
+                        probabilityText.className = 'high-risk';
+                    } else {
+                        messageTemplate = translations.predictionMessages[currentLang].noDiabetes;
+                        probabilityText.className = 'low-risk';
+                    }
+
+                    // Replace the placeholder with the actual probability
+                    probabilityText.textContent = messageTemplate.replace('{probability}', probabilityPercentage);
+
+                    // Store risk level for other functions that might need it
+                    riskLevel.setAttribute('data-risk', translations.riskLevels['en'][riskText]);
+
+                    updateResultIcon(riskText);
+
+                    const selectedModel = formData.get('model_type');
+                    modelType.textContent = translations.models[currentLang][selectedModel];
+
+                    // Display feature importance if available
+                    if (result.feature_importance && result.feature_importance.length > 0) {
+                        displayFeatureImportance(result.feature_importance);
+                    }
+
+                    // Format and display health advice
+                    const healthAdviceBtn = document.getElementById('healthAdviceBtn');
+                    const aiAdviceConsent = document.getElementById('aiAdviceConsent').checked;
+
+                    if (result.health_advice && aiAdviceConsent) {
+                        const adviceLines = result.health_advice.split('\n');
+                        let formattedAdvice = '';
+                        let hasEnglish = false;
+                        let hasRussian = false;
+
+                        adviceLines.forEach(line => {
+                            if (line.trim()) {
+                                if (line.includes('The medical advice is:')) {
+                                    formattedAdvice += `<div class="advice-en mb-2">${line.trim()}</div>`;
+                                    hasEnglish = true;
+                                } else if (line.includes('Медицинская рекомендация:')) {
+                                    formattedAdvice += `<div class="advice-ru mb-2">${line.trim()}</div>`;
+                                    hasRussian = true;
+                                }
+                            }
+                        });
+
+                        if (formattedAdvice) {
+                            const healthAdviceContent = document.getElementById('healthAdviceContent');
+                            healthAdviceContent.innerHTML = formattedAdvice;
+                            healthAdviceBtn.style.display = 'block';
+
+                            // Show advice based on current language
+                            const englishAdvice = healthAdviceContent.querySelectorAll('.advice-en');
+                            const russianAdvice = healthAdviceContent.querySelectorAll('.advice-ru');
+
+                            if (currentLang === 'en') {
+                                englishAdvice.forEach(el => el.style.display = 'block');
+                                russianAdvice.forEach(el => el.style.display = 'none');
+                            } else {
+                                englishAdvice.forEach(el => el.style.display = 'none');
+                                russianAdvice.forEach(el => el.style.display = 'block');
+                            }
+                        }
+                    } else {
+                        healthAdviceBtn.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                errorMessage.textContent = translations.error[currentLang];
+                errorMessage.className = 'alert alert-danger text-center mb-3';
+                errorMessage.style.display = 'block';
+                hideResultCard(resultCard);
+            } finally {
+                loadingSpinner.style.display = 'none';
+                submitButton.disabled = false;
+            }
+        });
+
+        // Handle blood glucose calculation from HbA1c
+        document.getElementById('calculateGlucose').addEventListener('change', function() {
+            const warning = document.getElementById('glucoseWarning');
+            const hba1cInput = document.getElementById('HbA1c_level');
+            const glucoseInput = document.getElementById('blood_glucose_level');
+            const calculatedGlucose = document.getElementById('calculatedGlucose');
+
+            if (this.checked) {
+                warning.style.display = 'block';
+                if (hba1cInput.value) {
+                    const hba1c = parseFloat(hba1cInput.value);
+                    const glucose = (28.7 * hba1c) - 46.7;
+                    calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${glucose.toFixed(1)} mg/dL`;
+                    glucoseInput.value = glucose.toFixed(1);
+                    updateLanguage(currentLang);
+                }
+            } else {
+                warning.style.display = 'none';
+                glucoseInput.value = '';
+            }
+        });
+
+        document.getElementById('HbA1c_level').addEventListener('input', function() {
+            const checkbox = document.getElementById('calculateGlucose');
+            const calculatedGlucose = document.getElementById('calculatedGlucose');
+            const glucoseInput = document.getElementById('blood_glucose_level');
+
+            if (checkbox.checked && this.value) {
+                const hba1c = parseFloat(this.value);
+                const glucose = (28.7 * hba1c) - 46.7;
+                calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${glucose.toFixed(1)} mg/dL`;
+                glucoseInput.value = glucose.toFixed(1);
+                updateLanguage(currentLang);
+            }
+        });
+
+        // Function to enforce decimal place limit
+        function enforceDecimalPrecision(input) {
+            if (input.value.includes('.')) {
+                const parts = input.value.split('.');
+                if (parts[1].length > 1) {
+                    input.value = parseFloat(input.value).toFixed(1);
+                }
+            }
+        }
+
+        // Add decimal validation to numeric inputs
+        document.querySelectorAll('input[type="number"][step="0.1"]').forEach(input => {
+            input.addEventListener('change', function() {
+                enforceDecimalPrecision(this);
+            });
+            input.addEventListener('input', function() {
+                if (this.value.split('.')[1]?.length > 1) {
+                    this.value = parseFloat(this.value).toFixed(1);
+                }
+            });
+        });
+
+        function displayFeatureImportance(featureImportance) {
+            const container = document.getElementById('featureImportanceContainer');
+            const section = document.getElementById('featureImportanceSection');
+
+            // Clear previous content
+            container.innerHTML = '';
+
+            // Create progress bars for each feature
+            featureImportance.forEach((feature, index) => {
+                const featureDiv = document.createElement('div');
+                featureDiv.className = 'feature-importance-item mb-3';
+
+                const direction = feature.direction === 'positive' ? 'increases' : 'decreases';
+                const directionText = {
+                    'en': {
+                        'increases': 'increases diabetes risk',
+                        'decreases': 'decreases diabetes risk'
+                    },
+                    'ru': {
+                        'increases': 'повышает риск диабета',
+                        'decreases': 'снижает риск диабета'
+                    }
+                };
+
+                const directionColor = feature.direction === 'positive' ? 'danger' : 'success';
+
+                featureDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="feature-name fw-bold">${feature.display_name}</span>
+                        <span class="feature-percentage text-${directionColor} fw-bold">${feature.percentage}%</span>
+                    </div>
+                    <div class="progress feature-progress" style="height: 8px;">
+                        <div class="progress-bar bg-${directionColor} feature-progress-bar"
+                             role="progressbar"
+                             style="width: 0%; transition: width 1s ease-in-out;"
+                             data-width="${feature.percentage}%">
+                        </div>
+                    </div>
+                    <small class="text-muted feature-direction">
+                        ${directionText[currentLang][direction]}
+                    </small>
+                `;
+
+                container.appendChild(featureDiv);
+            });
+
+            // Show the section with animation
+            section.style.display = 'block';
+            setTimeout(() => {
+                section.classList.add('fade-in');
+
+                // Animate progress bars
+                const progressBars = container.querySelectorAll('.feature-progress-bar');
+                progressBars.forEach((bar, index) => {
+                    setTimeout(() => {
+                        bar.style.width = bar.getAttribute('data-width');
+                    }, index * 200); // Stagger the animations
+                });
+            }, 100);
+        }
+
+        // Old modal-based feature contribution function removed
+        // Feature importance is now displayed inline using displayFeatureImportance()
+
+        // Function to toggle health advice popup
+        function toggleAdvicePopup() {
+            const popup = document.getElementById('healthAdvicePopup');
+            if (popup.classList.contains('show')) {
+                hideHealthAdvice();
+            } else {
+                showHealthAdvice();
+            }
+        }
+
+        // Health Advice Popup Functions
+        function showHealthAdvice() {
+            const popup = document.getElementById('healthAdvicePopup');
+            const adviceBtn = document.getElementById('healthAdviceBtn');
+
+            // Position the popup relative to the button
+            if (adviceBtn) {
+                const btnRect = adviceBtn.getBoundingClientRect();
+                const popupWidth = 300; // Width of the popup as defined in CSS
+
+                // Set the popup's position to be centered below the button
+                popup.style.position = 'absolute';
+                popup.style.top = '100%'; // Position below the button
+                popup.style.left = '50%'; // Center horizontally
+
+                // Make the popup a child of the button's parent for proper positioning
+                adviceBtn.parentNode.style.position = 'relative';
+
+                // Always scroll to make sure the popup is visible
+                setTimeout(() => {
+                    // Get the button's position
+                    const btnRect = adviceBtn.getBoundingClientRect();
+
+                    // Scroll to position the button at the top third of the viewport
+                    const scrollToY = window.scrollY + btnRect.top - (window.innerHeight / 3);
+
+                    window.scrollTo({
+                        top: scrollToY,
+                        behavior: 'smooth'
+                    });
+                }, 100); // Small delay to ensure the popup is rendered
+            }
+
+            popup.classList.add('show');
+        }
+
+        function hideHealthAdvice() {
+            const popup = document.getElementById('healthAdvicePopup');
+            popup.classList.remove('show');
+        }
+
+        // Add click outside handler for health advice popup
+        document.addEventListener('click', function(event) {
+            const popup = document.getElementById('healthAdvicePopup');
+            const adviceBtn = document.getElementById('healthAdviceBtn');
+
+            if (popup.classList.contains('show') &&
+                !popup.contains(event.target) &&
+                !adviceBtn.contains(event.target)) {
+                hideHealthAdvice();
+            }
+        });
+
+        // Handle HbA1c calculation from blood glucose
+        document.getElementById('calculateHbA1c').addEventListener('change', function() {
+            const warning = document.getElementById('hba1cWarning');
+            const glucoseInput = document.getElementById('blood_glucose_level');
+            const hba1cInput = document.getElementById('HbA1c_level');
+            const calculatedHbA1c = document.getElementById('calculatedHbA1c');
+
+            if (this.checked) {
+                warning.style.display = 'block';
+                if (glucoseInput.value) {
+                    const glucose = parseFloat(glucoseInput.value);
+                    const hba1c = (glucose + 46.7) / 28.7;
+                    calculatedHbA1c.innerHTML = `<span data-en="Estimated HbA1c:" data-ru="Расчетный уровень HbA1c:">Estimated HbA1c:</span> ${hba1c.toFixed(1)}%`;
+                    hba1cInput.value = hba1c.toFixed(1);
+                    updateLanguage(currentLang);
+                }
+            } else {
+                warning.style.display = 'none';
+                hba1cInput.value = '';
+            }
+        });
+
+        document.getElementById('blood_glucose_level').addEventListener('input', function() {
+            const checkbox = document.getElementById('calculateHbA1c');
+            const calculatedHbA1c = document.getElementById('calculatedHbA1c');
+            const hba1cInput = document.getElementById('HbA1c_level');
+
+            if (checkbox.checked && this.value) {
+                const glucose = parseFloat(this.value);
+                const hba1c = (glucose + 46.7) / 28.7;
+                calculatedHbA1c.innerHTML = `<span data-en="Estimated HbA1c:" data-ru="Расчетный уровень HbA1c:">Estimated HbA1c:</span> ${hba1c.toFixed(1)}%`;
+                hba1cInput.value = hba1c.toFixed(1);
+                updateLanguage(currentLang);
+            }
+        });
+
+        // BMI Calculator and HbA1c Calculator Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize BMI Calculator
+            const bmiButton = document.getElementById('showBmiCalc');
+            const bmiCalculator = document.getElementById('bmiCalculator');
+            const weightInput = document.getElementById('weight');
+            const heightInput = document.getElementById('height');
+            const bmiInput = document.getElementById('bmi');
+            const calculatedBmi = document.getElementById('calculatedBmi');
+
+            // Initialize HbA1c Calculator
+            const calculateHbA1cCheckbox = document.getElementById('calculateHbA1c');
+            const calculateGlucoseCheckbox = document.getElementById('calculateGlucose');
+
+            // Make sure both calculators don't run at the same time
+            calculateHbA1cCheckbox.addEventListener('change', function() {
+                if (this.checked && calculateGlucoseCheckbox.checked) {
+                    calculateGlucoseCheckbox.checked = false;
+                    document.getElementById('glucoseWarning').style.display = 'none';
+                }
+            });
+
+            calculateGlucoseCheckbox.addEventListener('change', function() {
+                if (this.checked && calculateHbA1cCheckbox.checked) {
+                    calculateHbA1cCheckbox.checked = false;
+                    document.getElementById('hba1cWarning').style.display = 'none';
+                }
+            });
+
+            function calculateBMI() {
+                const weight = parseFloat(weightInput.value);
+                const height = parseFloat(heightInput.value);
+
+                if (weight && height) {
+                    // Convert height to meters (from centimeters)
+                    const heightInMeters = height / 100;
+
+                    // Calculate BMI
+                    const bmi = weight / (heightInMeters * heightInMeters);
+
+                    // Update the BMI input field
+                    bmiInput.value = bmi.toFixed(1);
+
+                    // Show calculated BMI
+                    calculatedBmi.textContent = `BMI: ${bmi.toFixed(1)} kg/m²`;
+                } else {
+                    calculatedBmi.textContent = '';
+                    bmiInput.value = '';
+                }
+            }
+
+            // Event listeners
+            weightInput.addEventListener('input', calculateBMI);
+            heightInput.addEventListener('input', calculateBMI);
+
+            // Toggle calculator visibility with proper text updates
+            bmiButton.addEventListener('click', function() {
+                const isHidden = bmiCalculator.style.display === 'none';
+                bmiCalculator.style.display = isHidden ? 'block' : 'none';
+
+                // Update button text based on current language and state
+                if (currentLang === 'en') {
+                    bmiButton.setAttribute('data-en', isHidden ? 'Hide BMI Calculator' : 'Calculate BMI');
+                } else {
+                    bmiButton.setAttribute('data-ru', isHidden ? 'Скрыть калькулятор ИМТ' : 'Рассчитать ИМТ');
+                }
+                updateLanguage(currentLang);
+            });
+        });
+    </script>
+
+    <!-- Smoking History Information Modal -->
+    <div class="modal fade" id="smokingInfoModal" tabindex="-1" aria-labelledby="smokingInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="smokingInfoModalLabel">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span data-en="Smoking History Categories" data-ru="Категории истории курения">Smoking History Categories</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="smoking-categories">
+                        <!-- Former -->
+                        <div class="smoking-category-item">
+                            <div class="category-header">
+                                <i class="bi bi-clock-history category-icon"></i>
+                                <h6 data-en="Former" data-ru="Бывший">Former</h6>
+                            </div>
+                            <div class="category-content">
+                                <div class="definition-section">
+                                    <h6 class="section-title" data-en="Definition" data-ru="Определение">Definition</h6>
+                                    <p data-en="The person who used to smoke in the past but has quit smoking now."
+                                       data-ru="Человек, который курил в прошлом, но сейчас бросил курить.">
+                                        The person who used to smoke in the past but has quit smoking now.
+                                    </p>
+                                </div>
+                                <div class="explanation-section">
+                                    <h6 class="section-title" data-en="Explanation" data-ru="Объяснение">Explanation</h6>
+                                    <p data-en="'Former' refers to people who had the habit of smoking at some point in their life but have completely quit smoking now. These people may have quit smoking several years or even months ago."
+                                       data-ru="'Бывший' относится к людям, которые имели привычку курить в какой-то момент своей жизни, но полностью бросили курить сейчас. Эти люди могли бросить курить несколько лет или даже месяцев назад.">
+                                        "Former" refers to people who had the habit of smoking at some point in their life but have completely quit smoking now. These people may have quit smoking several years or even months ago.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Not Current -->
+                        <div class="smoking-category-item">
+                            <div class="category-header">
+                                <i class="bi bi-x-circle category-icon"></i>
+                                <h6 data-en="Not Current" data-ru="Не текущий">Not Current</h6>
+                            </div>
+                            <div class="category-content">
+                                <div class="definition-section">
+                                    <h6 class="section-title" data-en="Definition" data-ru="Определение">Definition</h6>
+                                    <p data-en="The person who does not smoke currently but may have smoked in the past."
+                                       data-ru="Человек, который не курит в настоящее время, но мог курить в прошлом.">
+                                        The person who does not smoke currently but may have smoked in the past.
+                                    </p>
+                                </div>
+                                <div class="explanation-section">
+                                    <h6 class="section-title" data-en="Explanation" data-ru="Объяснение">Explanation</h6>
+                                    <p data-en="'Not Current' describes people who have recently quit smoking or stopped smoking recently. It could have been just a day or two since they last smoked."
+                                       data-ru="'Не курит в настоящее время' описывает людей, которые недавно бросили курить или недавно прекратили курить. С момента их последнего курения могло пройти всего день или два.">
+                                        "Not Current" describes people who have recently quit smoking or stopped smoking recently. It could have been just a day or two since they last smoked.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ever -->
+                        <div class="smoking-category-item">
+                            <div class="category-header">
+                                <i class="bi bi-check-circle category-icon"></i>
+                                <h6 data-en="Ever" data-ru="Когда-либо">Ever</h6>
+                            </div>
+                            <div class="category-content">
+                                <div class="definition-section">
+                                    <h6 class="section-title" data-en="Definition" data-ru="Определение">Definition</h6>
+                                    <p data-en="The person who has ever smoked at any point in their life, whether they are currently smoking or have quit smoking in the past."
+                                       data-ru="Человек, который когда-либо курил в своей жизни, независимо от того, курит ли он сейчас или бросил курить в прошлом.">
+                                        The person who has ever smoked at any point in their life, whether they are currently smoking or have quit smoking in the past.
+                                    </p>
+                                </div>
+                                <div class="explanation-section">
+                                    <h6 class="section-title" data-en="Explanation" data-ru="Объяснение">Explanation</h6>
+                                    <p data-en="'Ever' includes everyone who has had any experience with smoking at some point in their life. This category includes both those who used to smoke in the past or those who are still smoking now."
+                                       data-ru="'Когда-либо' включает всех, кто имел какой-либо опыт курения в своей жизни. Эта категория включает как тех, кто курил в прошлом, так и тех, кто продолжает курить сейчас.">
+                                        "Ever" includes everyone who has had any experience with smoking at some point in their life. This category includes both those who used to smoke in the past or those who are still smoking now.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Current -->
+                        <div class="smoking-category-item">
+                            <div class="category-header">
+                                <i class="bi bi-activity category-icon"></i>
+                                <h6 data-en="Current" data-ru="Текущий">Current</h6>
+                            </div>
+                            <div class="category-content">
+                                <div class="definition-section">
+                                    <h6 class="section-title" data-en="Definition" data-ru="Определение">Definition</h6>
+                                    <p data-en="The person who is actively smoking at the time of data collection."
+                                       data-ru="Человек, который активно курит на момент сбора данных.">
+                                        The person who is actively smoking at the time of data collection.
+                                    </p>
+                                </div>
+                                <div class="explanation-section">
+                                    <h6 class="section-title" data-en="Explanation" data-ru="Объяснение">Explanation</h6>
+                                    <p data-en="'Current' refers to people who are actively smoking or who have reported smoking recently. They may still be smoking at the moment or have smoked regularly in the recent past."
+                                       data-ru="'Курит в настоящее время' относится к людям, которые активно курят или сообщили о недавнем курении. Они могут все еще курить в настоящий момент или курили регулярно в недавнем прошлом.">
+                                        "Current" refers to people who are actively smoking or who have reported smoking recently. They may still be smoking at the moment or have smoked regularly in the recent past.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Never -->
+                        <div class="smoking-category-item">
+                            <div class="category-header">
+                                <i class="bi bi-slash-circle category-icon"></i>
+                                <h6 data-en="Never" data-ru="Никогда">Never</h6>
+                            </div>
+                            <div class="category-content">
+                                <div class="definition-section">
+                                    <h6 class="section-title" data-en="Definition" data-ru="Определение">Definition</h6>
+                                    <p data-en="The person who has never smoked at any point in their life."
+                                       data-ru="Человек, который никогда не курил в своей жизни.">
+                                        The person who has never smoked at any point in their life.
+                                    </p>
+                                </div>
+                                <div class="explanation-section">
+                                    <h6 class="section-title" data-en="Explanation" data-ru="Объяснение">Explanation</h6>
+                                    <p data-en="'Never' refers to individuals who have never smoked a cigarette or used tobacco products at any stage of their life. These individuals have no history of smoking."
+                                       data-ru="'Никогда' относится к людям, которые никогда не курили сигареты и не использовали табачные изделия на любом этапе своей жизни. У этих людей нет истории курения.">
+                                        "Never" refers to individuals who have never smoked a cigarette or used tobacco products at any stage of their life. These individuals have no history of smoking.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Info -->
+                        <div class="smoking-category-item">
+                            <div class="category-header">
+                                <i class="bi bi-question-circle category-icon"></i>
+                                <h6 data-en="No Info" data-ru="Нет информации">No Info</h6>
+                            </div>
+                            <div class="category-content">
+                                <div class="definition-section">
+                                    <h6 class="section-title" data-en="Definition" data-ru="Определение">Definition</h6>
+                                    <p data-en="No information available about the person's smoking history."
+                                       data-ru="Нет доступной информации об истории курения человека.">
+                                        No information available about the person's smoking history.
+                                    </p>
+                                </div>
+                                <div class="explanation-section">
+                                    <h6 class="section-title" data-en="Explanation" data-ru="Объяснение">Explanation</h6>
+                                    <p data-en="'No Info' indicates that there is no data provided or available about the person's smoking habits. This could be because the person did not answer the smoking history question or the data was not recorded."
+                                       data-ru="'Нет информации' указывает на то, что нет предоставленных или доступных данных о курительных привычках человека. Это может быть из-за того, что человек не ответил на вопрос об истории курения, или данные не были зарегистрированы.">
+                                        "No Info" indicates that there is no data provided or available about the person's smoking habits. This could be because the person did not answer the smoking history question or the data was not recorded.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <span data-en="Close" data-ru="Закрыть">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Importance Modal removed - now using inline display -->
+
+    <!-- Footer removed as credits were moved to the header -->
+</body>
+</html>

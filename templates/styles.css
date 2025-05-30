@@ -1,0 +1,217 @@
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #c0392b;
+    --background-color: #f8f9fa;
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --transition-speed: 0.3s;
+}
+
+body {
+    background: var(--background-color);
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    box-shadow: var(--card-shadow);
+    animation: fadeIn 1s ease-out;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.prediction-form {
+    background: white;
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    padding: 2rem;
+    margin: 2rem auto;
+    max-width: 800px;
+    transition: transform var(--transition-speed);
+    animation: slideUp 0.5s ease-out;
+}
+
+.prediction-form:hover {
+    transform: translateY(-5px);
+}
+
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 0.8rem;
+    transition: all var(--transition-speed);
+}
+
+.form-control:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.btn-predict {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all var(--transition-speed);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-predict:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+}
+
+.btn-predict:active {
+    transform: translateY(0);
+}
+
+.result-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    padding: 2rem;
+    margin: 2rem auto;
+    max-width: 600px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all var(--transition-speed);
+}
+
+.result-card.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.risk-indicator {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: 10px;
+    transition: all var(--transition-speed);
+}
+
+.low-risk {
+    color: var(--success-color);
+    background: rgba(39, 174, 96, 0.1);
+}
+
+.medium-risk {
+    color: var(--warning-color);
+    background: rgba(243, 156, 18, 0.1);
+}
+
+.high-risk {
+    color: var(--danger-color);
+    background: rgba(192, 57, 43, 0.1);
+}
+
+.language-switch {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    gap: 10px;
+}
+
+.language-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    transition: all var(--transition-speed);
+    cursor: pointer;
+}
+
+.language-btn:hover,
+.language-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.medical-disclaimer {
+    background: rgba(243, 156, 18, 0.1);
+    border-left: 4px solid var(--warning-color);
+    padding: 1rem;
+    margin: 2rem auto;
+    max-width: 800px;
+    border-radius: 10px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Loading spinner animation */
+.spinner-border {
+    animation: spinner 0.8s linear infinite;
+}
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .prediction-form {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .btn-predict {
+        width: 100%;
+    }
+    
+    .language-switch {
+        top: 10px;
+        right: 10px;
+    }
+}

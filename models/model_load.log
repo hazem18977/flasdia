@@ -1,0 +1,5 @@
+random_forest: Failed to load - Model file not found at d:\project 4 kurs\diabetes_web_app\models\SR_Random_Forest.pkl
+adaboost: Failed to load - Model file not found at d:\project 4 kurs\diabetes_web_app\models\SR_AdaBoost.pkl
+decision_tree: Failed to load - Model file not found at d:\project 4 kurs\diabetes_web_app\models\SR_Decision_Tree.pkl
+logistic_regression: Failed to load - Model file not found at d:\project 4 kurs\diabetes_web_app\models\SR_Logistic_Regression.pkl
+svm: Failed to load - Model file not found at d:\project 4 kurs\diabetes_web_app\models\SR_SVM_Linear.pkl
