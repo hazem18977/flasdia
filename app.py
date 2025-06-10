@@ -23,6 +23,23 @@ warnings.filterwarnings('ignore')
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
 
+# Glucose unit conversion utilities
+def convert_mmol_to_mgdl(mmol_value):
+    """Convert glucose from mmol/L to mg/dL"""
+    return mmol_value * 18.018
+
+def convert_mgdl_to_mmol(mgdl_value):
+    """Convert glucose from mg/dL to mmol/L"""
+    return mgdl_value / 18.018
+
+def format_glucose_for_display(mgdl_value, lang='en'):
+    """Format glucose value for display in both units"""
+    mmol_value = convert_mgdl_to_mmol(mgdl_value)
+    if lang == 'en':
+        return f"{mgdl_value:.1f} mg/dL ({mmol_value:.1f} mmol/L)"
+    else:
+        return f"{mgdl_value:.1f} мг/дл ({mmol_value:.1f} ммоль/л)"
+
 # DeepSeek API Configuration
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
@@ -36,24 +53,26 @@ def generate_health_advice(data, predictions, lang='en'):
 
     # Define concise prompts based on risk level
     if lang == 'en':
+        glucose_display = format_glucose_for_display(float(data['blood_glucose_level']), 'en')
         prompt = f"""Patient data:
 - Age: {data['age']}
 - Gender: {data['gender']}
 - BMI: {data['bmi']}
 - HbA1c: {data['HbA1c_level']}%
-- Blood Glucose: {data['blood_glucose_level']} mg/dL (Normal: <140, Prediabetes: 140–199, Diabetes: ≥200)
+- Blood Glucose: {glucose_display} (Normal: <140 mg/dL/<7.8 mmol/L, Prediabetes: 140–199 mg/dL/7.8-11.0 mmol/L, Diabetes: ≥200 mg/dL/≥11.1 mmol/L)
 - Hypertension: {'Yes' if int(data['hypertension']) == 1 else 'No'}
 - Heart Disease: {'Yes' if int(data['heart_disease']) == 1 else 'No'}
 - Smoking History: {'Current' if data['smoking_history'].lower() == 'current' else 'Former' if data['smoking_history'].lower() == 'former' else 'Never' if data['smoking_history'].lower() == 'never' else 'Ever' if data['smoking_history'].lower() == 'ever' else 'Not Current' if data['smoking_history'].lower() == 'not current' else 'No Info'}
 - Risk Level: {'High risk' if majority_prediction == 1 else 'Lower risk'} of diabetes"""
         system_message = "You are a concise medical assistant specializing in diabetes and chronic conditions. Based on the patient's provided information (age, gender, BMI, HbA1c, blood glucose, hypertension, heart disease, smoking status), generate exactly five personalized medical advice sentences, each starting with 'The medical advice is:'. For critical conditions (e.g., HbA1c ≥9% or glucose ≥300 mg/dL, severe hypertension, or critical cardiac issues), include urgent advice to consult a doctor immediately. For prediabetes (HbA1c 5.7–6.4% or glucose 140–199 mg/dL), recommend specific prevention steps (e.g., reduce sugar intake) and consulting a doctor within a week. For diabetes (HbA1c ≥6.5%), advise daily glucose monitoring and dietary changes. For obesity (BMI ≥30), specify a weight loss goal (5-10% of body weight), calorie reduction (500-1000 kcal/day), and exercise (30 min/day). For overweight (BMI 25–29.9), recommend moderate weight loss (3-5%) and exercise (20-30 min/day). For hypertension, advise reducing salt to <2g/day and weekly blood pressure monitoring. For heart disease, recommend a low-saturated-fat diet and cardiac check-ups every 6 months. If the patient is a current smoker, urge quitting smoking and seeking medical support. If a former smoker, encourage continued abstinence and periodic lung/heart screenings. If never smoked, acknowledge as a positive factor. Ensure all advice is practical, actionable, and tailored to the patient's data, avoiding generic phrases like 'maintain a healthy lifestyle'. Do not include any extra explanations or text outside the five advice sentences."
     else:
+        glucose_display = format_glucose_for_display(float(data['blood_glucose_level']), 'ru')
         prompt = f"""Данные пациента:
 - Возраст: {data['age']}
 - Пол: {'Женский' if data['gender'] == 'Female' else 'Мужской' if data['gender'] == 'Male' else 'Неизвестно'}
 - ИМТ: {data['bmi']}
 - HbA1c: {data['HbA1c_level']}%
-- Глюкоза: {data['blood_glucose_level']} мг/дл (Норма: <140, Преддиабет: 140–199, Диабет: ≥200)
+- Глюкоза: {glucose_display} (Норма: <140 мг/дл/<7.8 ммоль/л, Преддиабет: 140–199 мг/дл/7.8-11.0 ммоль/л, Диабет: ≥200 мг/дл/≥11.1 ммоль/л)
 - Гипертония: {'Да' if int(data['hypertension']) == 1 else 'Нет'}
 - Сердечные заболевания: {'Да' if int(data['heart_disease']) == 1 else 'Нет'}
 - История курения: {'Текущий курильщик' if data['smoking_history'].lower() == 'current' else 'Бывший курильщик' if data['smoking_history'].lower() == 'former' else 'Никогда не курил' if data['smoking_history'].lower() == 'never' else 'Курил ранее' if data['smoking_history'].lower() == 'ever' else 'Не курит сейчас' if data['smoking_history'].lower() == 'not current' else 'Нет информации'}
@@ -138,6 +157,7 @@ ERROR_MESSAGES = {
         'age_range': 'Age must be between 0 and 120',
         'bmi_range': 'BMI must be between 15 and 75',
         'hba1c_range': 'HbA1c level must be between 3 and 20',
+        'glucose_range': 'Blood glucose level must be between 50 and 530 mg/dL (2.8-29.4 mmol/L)',
         'svm_feature_error': 'One or more input values are outside the expected range for the SVM model.',
         'svm_convergence_warning': 'The SVM model had difficulty making a confident prediction with the given input values.'
     },
@@ -149,7 +169,7 @@ ERROR_MESSAGES = {
         'age_range': 'Возраст должен быть от 0 до 120',
         'bmi_range': 'ИМТ должен быть от 15 до 75',
         'hba1c_range': 'Уровень HbA1c должен быть от 3 до 20',
-        'glucose_range': 'Уровень глюкозы в крови должен быть от 50 до 400',
+        'glucose_range': 'Уровень глюкозы в крови должен быть от 50 до 530 мг/дл (2.8-29.4 ммоль/л)',
         'processing_error': 'Произошла ошибка при обработке данных',
         'svm_prediction_error': 'Модель SVM столкнулась с ошибкой при обработке ваших входных значений. Это может быть связано с неожиданными диапазонами значений.',
         'svm_feature_error': 'Одно или несколько входных значений находятся за пределами ожидаемого диапазона для модели SVM.',
