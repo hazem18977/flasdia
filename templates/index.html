@@ -290,8 +290,24 @@
                                 <label for="blood_glucose_level" class="form-label" data-en="Blood Glucose Level" data-ru="Уровень глюкозы в крови">Blood Glucose Level</label>
                                 <div class="input-group">
                                     <input type="number" class="form-control" id="blood_glucose_level" name="blood_glucose_level" step="0.1" min="50" max="530" required>
-                                    <span class="input-group-text" data-en="mg/dL" data-ru="мг/дл">mg/dL</span>
+                                    <span class="input-group-text" id="glucoseUnitDisplay" data-en="mg/dL" data-ru="мг/дл">mg/dL</span>
                                 </div>
+
+                                <!-- Unit Conversion Controls -->
+                                <div class="glucose-unit-controls mt-2">
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Glucose Unit Selection">
+                                        <input type="radio" class="btn-check" name="glucoseUnit" id="glucoseUnitMgDl" value="mg/dL" checked>
+                                        <label class="btn btn-outline-primary" for="glucoseUnitMgDl" data-en="mg/dL" data-ru="мг/дл">mg/dL</label>
+
+                                        <input type="radio" class="btn-check" name="glucoseUnit" id="glucoseUnitMmolL" value="mmol/L">
+                                        <label class="btn btn-outline-primary" for="glucoseUnitMmolL" data-en="mmol/L" data-ru="ммоль/л">mmol/L</label>
+                                    </div>
+                                    <div id="glucoseConversionInfo" class="mt-1 small text-muted" style="display: none;">
+                                        <span data-en="Converted value:" data-ru="Конвертированное значение:">Converted value:</span>
+                                        <span id="glucoseConvertedValue" class="fw-bold"></span>
+                                    </div>
+                                </div>
+
                                 <div class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" id="calculateHbA1c">
                                     <label class="form-check-label" for="calculateHbA1c" data-en="Calculate HbA1c from Blood Glucose" data-ru="Рассчитать HbA1c по уровень глюкозы">
@@ -597,6 +613,16 @@
             const probabilityText = document.getElementById('probabilityText');
             const modelType = document.getElementById('modelType');
 
+            // Convert glucose to mg/dL if necessary before sending to backend
+            const glucoseInput = document.getElementById('blood_glucose_level');
+            const currentUnit = document.querySelector('input[name="glucoseUnit"]:checked').value;
+
+            if (glucoseInput.value && currentUnit === 'mmol/L') {
+                const glucoseInMmolL = parseFloat(glucoseInput.value);
+                const glucoseInMgDl = convertMmolLToMgDl(glucoseInMmolL);
+                formData.set('blood_glucose_level', glucoseInMgDl.toFixed(1));
+            }
+
             // Add language parameter to formData
             formData.append('lang', currentLang);
 
@@ -761,14 +787,27 @@
                 warning.style.display = 'block';
                 if (hba1cInput.value) {
                     const hba1c = parseFloat(hba1cInput.value);
-                    const glucose = (28.7 * hba1c) - 46.7;
-                    calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${glucose.toFixed(1)} mg/dL`;
-                    glucoseInput.value = glucose.toFixed(1);
+                    const glucoseInMgDl = (28.7 * hba1c) - 46.7;
+
+                    // Convert to current unit if necessary
+                    const currentUnit = document.querySelector('input[name="glucoseUnit"]:checked').value;
+                    let displayValue = glucoseInMgDl;
+                    let displayUnit = 'mg/dL';
+
+                    if (currentUnit === 'mmol/L') {
+                        displayValue = convertMgDlToMmolL(glucoseInMgDl);
+                        displayUnit = 'mmol/L';
+                    }
+
+                    calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${displayValue.toFixed(1)} ${displayUnit}`;
+                    glucoseInput.value = displayValue.toFixed(1);
                     updateLanguage(currentLang);
+                    updateGlucoseConversion();
                 }
             } else {
                 warning.style.display = 'none';
                 glucoseInput.value = '';
+                updateGlucoseConversion();
             }
         });
 
@@ -779,10 +818,22 @@
 
             if (checkbox.checked && this.value) {
                 const hba1c = parseFloat(this.value);
-                const glucose = (28.7 * hba1c) - 46.7;
-                calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${glucose.toFixed(1)} mg/dL`;
-                glucoseInput.value = glucose.toFixed(1);
+                const glucoseInMgDl = (28.7 * hba1c) - 46.7;
+
+                // Convert to current unit if necessary
+                const currentUnit = document.querySelector('input[name="glucoseUnit"]:checked').value;
+                let displayValue = glucoseInMgDl;
+                let displayUnit = 'mg/dL';
+
+                if (currentUnit === 'mmol/L') {
+                    displayValue = convertMgDlToMmolL(glucoseInMgDl);
+                    displayUnit = 'mmol/L';
+                }
+
+                calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${displayValue.toFixed(1)} ${displayUnit}`;
+                glucoseInput.value = displayValue.toFixed(1);
                 updateLanguage(currentLang);
+                updateGlucoseConversion();
             }
         });
 
@@ -963,12 +1014,119 @@
             const hba1cInput = document.getElementById('HbA1c_level');
 
             if (checkbox.checked && this.value) {
-                const glucose = parseFloat(this.value);
-                const hba1c = (glucose + 46.7) / 28.7;
+                // Always use mg/dL for HbA1c calculation, convert if necessary
+                let glucoseInMgDl = parseFloat(this.value);
+                const currentUnit = document.querySelector('input[name="glucoseUnit"]:checked').value;
+
+                if (currentUnit === 'mmol/L') {
+                    glucoseInMgDl = glucoseInMgDl * 18.018; // Convert mmol/L to mg/dL
+                }
+
+                const hba1c = (glucoseInMgDl + 46.7) / 28.7;
                 calculatedHbA1c.innerHTML = `<span data-en="Estimated HbA1c:" data-ru="Расчетный уровень HbA1c:">Estimated HbA1c:</span> ${hba1c.toFixed(1)}%`;
                 hba1cInput.value = hba1c.toFixed(1);
                 updateLanguage(currentLang);
             }
+
+            // Update conversion display
+            updateGlucoseConversion();
+        });
+
+        // Glucose Unit Conversion Functions
+        function convertMgDlToMmolL(mgDl) {
+            return mgDl / 18.018;
+        }
+
+        function convertMmolLToMgDl(mmolL) {
+            return mmolL * 18.018;
+        }
+
+        function updateGlucoseConversion() {
+            const glucoseInput = document.getElementById('blood_glucose_level');
+            const currentUnit = document.querySelector('input[name="glucoseUnit"]:checked').value;
+            const conversionInfo = document.getElementById('glucoseConversionInfo');
+            const convertedValue = document.getElementById('glucoseConvertedValue');
+
+            if (glucoseInput.value && parseFloat(glucoseInput.value) > 0) {
+                const inputValue = parseFloat(glucoseInput.value);
+                let convertedVal, convertedUnit;
+
+                if (currentUnit === 'mg/dL') {
+                    convertedVal = convertMgDlToMmolL(inputValue);
+                    convertedUnit = 'mmol/L';
+                } else {
+                    convertedVal = convertMmolLToMgDl(inputValue);
+                    convertedUnit = 'mg/dL';
+                }
+
+                convertedValue.textContent = `${convertedVal.toFixed(1)} ${convertedUnit}`;
+                conversionInfo.style.display = 'block';
+            } else {
+                conversionInfo.style.display = 'none';
+            }
+        }
+
+        function updateGlucoseInputConstraints() {
+            const glucoseInput = document.getElementById('blood_glucose_level');
+            const currentUnit = document.querySelector('input[name="glucoseUnit"]:checked').value;
+            const unitDisplay = document.getElementById('glucoseUnitDisplay');
+
+            if (currentUnit === 'mg/dL') {
+                glucoseInput.min = '50';
+                glucoseInput.max = '530';
+                glucoseInput.step = '0.1';
+                unitDisplay.textContent = 'mg/dL';
+                unitDisplay.setAttribute('data-en', 'mg/dL');
+                unitDisplay.setAttribute('data-ru', 'мг/дл');
+            } else {
+                glucoseInput.min = '2.8';
+                glucoseInput.max = '29.4';
+                glucoseInput.step = '0.1';
+                unitDisplay.textContent = 'mmol/L';
+                unitDisplay.setAttribute('data-en', 'mmol/L');
+                unitDisplay.setAttribute('data-ru', 'ммоль/л');
+            }
+
+            updateLanguage(currentLang);
+        }
+
+        function switchGlucoseUnit() {
+            const glucoseInput = document.getElementById('blood_glucose_level');
+            const currentUnit = document.querySelector('input[name="glucoseUnit"]:checked').value;
+
+            if (glucoseInput.value && parseFloat(glucoseInput.value) > 0) {
+                const currentValue = parseFloat(glucoseInput.value);
+                let newValue;
+
+                if (currentUnit === 'mg/dL') {
+                    // Switching to mg/dL, so current value was in mmol/L
+                    newValue = convertMmolLToMgDl(currentValue);
+                } else {
+                    // Switching to mmol/L, so current value was in mg/dL
+                    newValue = convertMgDlToMmolL(currentValue);
+                }
+
+                glucoseInput.value = newValue.toFixed(1);
+            }
+
+            updateGlucoseInputConstraints();
+            updateGlucoseConversion();
+
+            // Update HbA1c calculation if active
+            const calculateHbA1cCheckbox = document.getElementById('calculateHbA1c');
+            if (calculateHbA1cCheckbox.checked && glucoseInput.value) {
+                glucoseInput.dispatchEvent(new Event('input'));
+            }
+        }
+
+        // Event listeners for glucose unit conversion
+        document.querySelectorAll('input[name="glucoseUnit"]').forEach(radio => {
+            radio.addEventListener('change', switchGlucoseUnit);
+        });
+
+        // Initialize glucose conversion display
+        document.addEventListener('DOMContentLoaded', function() {
+            updateGlucoseInputConstraints();
         });
 
         // BMI Calculator and HbA1c Calculator Functionality
