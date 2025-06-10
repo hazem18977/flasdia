@@ -289,7 +289,7 @@
                             <div class="col-md-6 mb-3">
                                 <label for="blood_glucose_level" class="form-label" data-en="Blood Glucose Level" data-ru="Уровень глюкозы в крови">Blood Glucose Level</label>
                                 <div class="input-group">
-                                    <input type="number" class="form-control" id="blood_glucose_level" name="blood_glucose_level" step="0.1" min="50" max="530" required>
+                                    <input type="number" class="form-control" id="blood_glucose_level" name="blood_glucose_level" step="0.01" min="50" max="530" required>
                                     <span class="input-group-text" id="glucoseUnitDisplay" data-en="mg/dL" data-ru="мг/дл">mg/dL</span>
                                 </div>
 
@@ -620,7 +620,7 @@
             if (glucoseInput.value && currentUnit === 'mmol/L') {
                 const glucoseInMmolL = parseFloat(glucoseInput.value);
                 const glucoseInMgDl = convertMmolLToMgDl(glucoseInMmolL);
-                formData.set('blood_glucose_level', glucoseInMgDl.toFixed(1));
+                formData.set('blood_glucose_level', glucoseInMgDl.toFixed(2));
             }
 
             // Add language parameter to formData
@@ -799,8 +799,8 @@
                         displayUnit = 'mmol/L';
                     }
 
-                    calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${displayValue.toFixed(1)} ${displayUnit}`;
-                    glucoseInput.value = displayValue.toFixed(1);
+                    calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${displayValue.toFixed(2)} ${displayUnit}`;
+                    glucoseInput.value = displayValue.toFixed(2);
                     updateLanguage(currentLang);
                     updateGlucoseConversion();
                 }
@@ -830,8 +830,8 @@
                     displayUnit = 'mmol/L';
                 }
 
-                calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${displayValue.toFixed(1)} ${displayUnit}`;
-                glucoseInput.value = displayValue.toFixed(1);
+                calculatedGlucose.innerHTML = `<span data-en="Estimated Blood Glucose:" data-ru="Расчетный уровень глюкозы:">Estimated Blood Glucose:</span> ${displayValue.toFixed(2)} ${displayUnit}`;
+                glucoseInput.value = displayValue.toFixed(2);
                 updateLanguage(currentLang);
                 updateGlucoseConversion();
             }
@@ -842,19 +842,19 @@
             if (input.value.includes('.')) {
                 const parts = input.value.split('.');
                 if (parts[1].length > 1) {
-                    input.value = parseFloat(input.value).toFixed(1);
+                    input.value = parseFloat(input.value).toFixed(2);
                 }
             }
         }
 
         // Add decimal validation to numeric inputs
-        document.querySelectorAll('input[type="number"][step="0.1"]').forEach(input => {
+        document.querySelectorAll('input[type="number"][step="0.01"]').forEach(input => {
             input.addEventListener('change', function() {
                 enforceDecimalPrecision(this);
             });
             input.addEventListener('input', function() {
                 if (this.value.split('.')[1]?.length > 1) {
-                    this.value = parseFloat(this.value).toFixed(1);
+                    this.value = parseFloat(this.value).toFixed(2);
                 }
             });
         });
@@ -1059,7 +1059,7 @@
                     convertedUnit = 'mg/dL';
                 }
 
-                convertedValue.textContent = `${convertedVal.toFixed(1)} ${convertedUnit}`;
+                convertedValue.textContent = `${convertedVal.toFixed(2)} ${convertedUnit}`;
                 conversionInfo.style.display = 'block';
             } else {
                 conversionInfo.style.display = 'none';
@@ -1074,14 +1074,14 @@
             if (currentUnit === 'mg/dL') {
                 glucoseInput.min = '50';
                 glucoseInput.max = '530';
-                glucoseInput.step = '0.1';
+                glucoseInput.step = '0.01';
                 unitDisplay.textContent = 'mg/dL';
                 unitDisplay.setAttribute('data-en', 'mg/dL');
                 unitDisplay.setAttribute('data-ru', 'мг/дл');
             } else {
                 glucoseInput.min = '2.8';
                 glucoseInput.max = '29.4';
-                glucoseInput.step = '0.1';
+                glucoseInput.step = '0.01';
                 unitDisplay.textContent = 'mmol/L';
                 unitDisplay.setAttribute('data-en', 'mmol/L');
                 unitDisplay.setAttribute('data-ru', 'ммоль/л');
@@ -1367,8 +1367,6 @@
         </div>
     </div>
 
-    <!-- Feature Importance Modal removed - now using inline display -->
 
-    <!-- Footer removed as credits were moved to the header -->
 </body>
 </html>
