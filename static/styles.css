@@ -1209,3 +1209,127 @@ body {
         font-size: 0.75rem;
     }
 }
+
+/* Glucose Unit Conversion Styles */
+.glucose-unit-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.glucose-unit-controls .btn-group {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.glucose-unit-controls .btn {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+    font-weight: 500;
+    border: 2px solid var(--secondary-color);
+    transition: all var(--transition-speed);
+    position: relative;
+    overflow: hidden;
+}
+
+.glucose-unit-controls .btn-outline-primary {
+    color: var(--secondary-color);
+    background-color: white;
+    border-color: var(--secondary-color);
+}
+
+.glucose-unit-controls .btn-outline-primary:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+    transform: translateY(-1px);
+}
+
+.glucose-unit-controls .btn-check:checked + .btn-outline-primary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.glucose-unit-controls .btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, rgba(255, 255, 255, 0.2), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+}
+
+.glucose-unit-controls .btn:hover::after {
+    transform: translateX(100%);
+}
+
+#glucoseConversionInfo {
+    background: rgba(52, 152, 219, 0.05);
+    border-radius: 6px;
+    padding: 0.5rem 0.8rem;
+    border-left: 3px solid var(--secondary-color);
+    animation: fadeIn 0.3s ease-out;
+}
+
+#glucoseConvertedValue {
+    color: var(--secondary-color);
+    font-weight: 600;
+}
+
+/* Responsive design for glucose unit controls */
+@media (max-width: 768px) {
+    .glucose-unit-controls .btn {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.6rem;
+    }
+
+    #glucoseConversionInfo {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Enhanced input group styling for glucose field */
+.input-group:has(#blood_glucose_level) {
+    transition: all var(--transition-speed);
+}
+
+.input-group:has(#blood_glucose_level):focus-within {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.15);
+}
+
+#glucoseUnitDisplay {
+    font-weight: 600;
+    color: var(--primary-color);
+    background-color: rgba(52, 152, 219, 0.1);
+    border-color: var(--secondary-color);
+    transition: all var(--transition-speed);
+}
+
+/* Animation for unit switching */
+@keyframes unitSwitch {
+    0% {
+        opacity: 0.7;
+        transform: scale(0.95);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.glucose-unit-controls .btn-check:checked + .btn-outline-primary {
+    animation: unitSwitch 0.3s ease-out;
+}
