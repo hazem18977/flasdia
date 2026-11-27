@@ -21,7 +21,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-only-change-me')
 
 # Glucose unit conversion utilities
 def convert_mmol_to_mgdl(mmol_value):
@@ -40,11 +40,12 @@ def format_glucose_for_display(mgdl_value, lang='en'):
     else:
         return f"{mgdl_value:.1f} мг/дл ({mmol_value:.1f} ммоль/л)"
 
-# DeepSeek API Configuration
+# Optional AI advice configuration. Never hardcode API keys in source code.
+NVIDIA_API_KEY = os.environ.get('NVIDIA_API_KEY')
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
-    api_key="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"
-)
+    api_key=NVIDIA_API_KEY
+) if NVIDIA_API_KEY else None
 
 def generate_health_advice(data, predictions, lang='en'):
     """Generate personalized health advice using DeepSeek API"""
@@ -78,6 +79,9 @@ def generate_health_advice(data, predictions, lang='en'):
 - История курения: {'Текущий курильщик' if data['smoking_history'].lower() == 'current' else 'Бывший курильщик' if data['smoking_history'].lower() == 'former' else 'Никогда не курил' if data['smoking_history'].lower() == 'never' else 'Курил ранее' if data['smoking_history'].lower() == 'ever' else 'Не курит сейчас' if data['smoking_history'].lower() == 'not current' else 'Нет информации'}
 - Уровень риска: {'Высокий риск' if majority_prediction == 1 else 'Низкий риск'} диабета"""
         system_message = "detailed thinking off. Вы лаконичный медицинский ассистент, специализирующийся на диабете и хронических заболеваниях. На основе предоставленных данных пациента (возраст, пол, ИМТ, HbA1c, уровень глюкозы в крови, гипертония, сердечные заболевания, статус курения) сгенерируйте ровно пять персонализированных медицинских рекомендаций, каждая из которых начинается с «Медицинская рекомендация:». Для критических состояний (например, HbA1c ≥9% или глюкоза ≥300 мг/дл, тяжелая гипертония или критические сердечные проблемы) включите срочный совет немедленно обратиться к врачу. Для предиабета (HbA1c 5.7–6.4% или глюкоза 140–199 мг/дл) рекомендуйте конкретные меры профилактики (например, снижение потребления сахара) и консультацию с врачом в течение недели. Для диабета (HbA1c ≥6.5%) советуйте ежедневный мониторинг глюкозы и изменения в питании. Для ожирения (ИМТ ≥30) укажите цель снижения веса (5–10% массы тела), сокращение калорий (500–1000 ккал/день) и физические упражнения (30 мин/день). Для избыточного веса (ИМТ 25–29.9) рекомендуйте умеренное снижение веса (3–5%) и упражнения (20–30 мин/день). Для гипертонии советуйте сократить потребление соли до <2 г/день и еженедельный мониторинг артериального давления. Для сердечных заболеваний рекомендуйте диету с низким содержанием насыщенных жиров и кардиологические осмотры каждые 6 месяцев. Если пациент курит в настоящее время, настоятельно советуйте бросить курить и обратиться за медицинской поддержкой. Если пациент бывший курильщик, поощряйте продолжение воздержания и периодические обследования легких/сердца. Если пациент никогда не курил, отметьте это как положительный фактор. Убедитесь, что все рекомендации практичны, конкретны и адаптированы к данным пациента, избегая общих фраз, таких как «вести здоровый образ жизни». Не включайте никаких дополнительных объяснений или текста, кроме пяти рекомендательных предложений.."
+
+    if client is None:
+        return "Consult your doctor for personalized advice." if lang == 'en' else "Проконсультируйтесь с врачом для получения персональных рекомендаций."
 
     try:
         completion = client.chat.completions.create(
@@ -913,4 +917,4 @@ def api_get_personalized_feature_importance(model_type):
         return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.environ.get('FLASK_DEBUG') == '1')
